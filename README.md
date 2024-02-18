@@ -162,7 +162,7 @@ The following example will generate samples from the test split of the [The Pile
 
 
 ```bash
-accelerate launch generate.py \
+accelerate launch run_gen.py \
 --dataset_name andstor/the_pile_github \
 --dataset_config_name java \
 --dataset_split test \
@@ -172,7 +172,7 @@ accelerate launch generate.py \
 --per_device_batch_size 1 \
 --output_dir output \
 --seed 42 \
---preprocessing_num_workers 20 \
+--preprocessing_num_workers 10 \
 --max_window_size 512 \
 --max_new_tokens 512
 ```
