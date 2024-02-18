@@ -144,7 +144,7 @@ Early stopping can be done by using brace matching. This will stop the generatio
 Stridden generation is done by only providing an input data column. This will be split into parts where each part is generated in a "sliding window" approach. Each window serves as the reference for the preceding window. The window stride (read size) is determined by the `--max_window_size` argument. The number of tokens to be generated is controlled by `--max_new_tokens`. The number of subsamples to use from each data example can be controlled by `--subsamples`. If `--subsamples` is set to `None`, all subsamples will be used.
 
 #### Filtering
-The dataset is filtered by the following criteria:
+The data is filtered by the following criteria:
 - The input is at least max_new_tokens + max_window_size long
 
 #### Window splitting
