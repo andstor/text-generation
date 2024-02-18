@@ -1,5 +1,5 @@
 # text-generation
-> Generation script for generating text with LLMs
+> Generation script(s) for generating text with LLMs
 
 ## Description
 This repository contains scripts for generating text with language models. The scripts are designed to be used with the Hugging Face `transformers` library and the `datasets` library. Accelerate is used to speed up the generation process.
