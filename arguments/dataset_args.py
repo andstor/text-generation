@@ -35,7 +35,7 @@ class DatasetArguments:
     validation_split_percentage: Optional[int] = field(
         default=5,
         metadata={
-            "help": "The percentage of the train set used as validation set in case there's no validation split"
+            "help": "The percentage of the train set used as validation set in case there is no validation split"
         },
     )
     preprocessing_num_workers: Optional[int] = field(

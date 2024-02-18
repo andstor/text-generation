@@ -40,7 +40,7 @@ usage: run_gen.py [-h] [--model_name_or_path MODEL_NAME_OR_PATH] [--model_type M
 optional arguments:
   -h, --help            show this help message and exit
   --model_name_or_path MODEL_NAME_OR_PATH
-                        The model checkpoint for weights initialization. Don't set if you want to train a model from scratch. (default: None)
+                        The model checkpoint for weights initialization. Do not set if you want to train a model from scratch. (default: None)
   --model_type MODEL_TYPE
                         If training from scratch, pass a model type from the list: bart, bert, bert-generation, big_bird, bigbird_pegasus, biogpt, blenderbot, blenderbot-small,
                         bloom, camembert, llama, codegen, cpmant, ctrl, data2vec-text, electra, ernie, falcon, fuyu, git, gpt2, gpt2, gpt_bigcode, gpt_neo, gpt_neox,
@@ -78,7 +78,7 @@ optional arguments:
   --overwrite_cache [OVERWRITE_CACHE]
                         Overwrite the cached training and evaluation sets (default: False)
   --validation_split_percentage VALIDATION_SPLIT_PERCENTAGE
-                        The percentage of the train set used as validation set in case there's no validation split (default: 5)
+                        The percentage of the train set used as validation set in case there is no validation split (default: 5)
   --preprocessing_num_workers PREPROCESSING_NUM_WORKERS
                         The number of processes to use for the preprocessing. (default: None)
   --log_preditions [LOG_PREDITIONS]
