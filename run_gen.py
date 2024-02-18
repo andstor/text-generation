@@ -19,7 +19,7 @@ import random
 import warnings
 import sys
 import os
-from arguments import ModelArguments, DatasetArguments, LoggingArguments, GenerationArguments
+from arguments import ModelArguments, DatasetArguments, GenerationArguments
 from stopping_criterias import BraceMatchingCriteria
 
 
@@ -38,13 +38,13 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DatasetArguments, LoggingArguments, GenerationArguments))
+    parser = HfArgumentParser((ModelArguments, DatasetArguments, GenerationArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
-        model_args, data_args, logging_args, gen_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, gen_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
-        model_args, data_args, logging_args, gen_args = parser.parse_args_into_dataclasses()
+        model_args, data_args, gen_args = parser.parse_args_into_dataclasses()
 
     if model_args.use_auth_token is not None:
         warnings.warn(

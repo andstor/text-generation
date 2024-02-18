@@ -27,26 +27,33 @@ The `run_gen.py` script will generate samples from a specified dataset with a Hu
 ### Usage
 
 ```bash
-usage: run_gen.py [-h] [--model_name_or_path MODEL_NAME_OR_PATH] [--model_type MODEL_TYPE] [--config_name CONFIG_NAME] [--tokenizer_name TOKENIZER_NAME]
-                  [--use_fast_tokenizer [USE_FAST_TOKENIZER]] [--no_use_fast_tokenizer] [--model_revision MODEL_REVISION] [--token TOKEN] [--use_auth_token [USE_AUTH_TOKEN]]
-                  [--dataset_name DATASET_NAME] [--dataset_config_name DATASET_CONFIG_NAME] [--dataset_split DATASET_SPLIT] [--text_column_name TEXT_COLUMN_NAME]
-                  [--reference_column_name REFERENCE_COLUMN_NAME] [--dataset_revision DATASET_REVISION] [--streaming [STREAMING]] [--overwrite_cache [OVERWRITE_CACHE]]
-                  [--validation_split_percentage VALIDATION_SPLIT_PERCENTAGE] [--preprocessing_num_workers PREPROCESSING_NUM_WORKERS] [--log_preditions [LOG_PREDITIONS]]
-                  [--log_predition_samples LOG_PREDITION_SAMPLES] [--generation_config_file GENERATION_CONFIG_FILE] [--per_device_batch_size PER_DEVICE_BATCH_SIZE]
-                  [--output_dir OUTPUT_DIR] [--overwrite_output_dir [OVERWRITE_OUTPUT_DIR]] [--id_column_name ID_COLUMN_NAME] [--keep_columns KEEP_COLUMNS [KEEP_COLUMNS ...]]
-                  [--seed SEED] [--max_new_tokens MAX_NEW_TOKENS] [--max_window_size MAX_WINDOW_SIZE] [--subsamples SUBSAMPLES] [--use_brace_matching [USE_BRACE_MATCHING]]
+usage: run_gen.py [-h] [--model_name_or_path MODEL_NAME_OR_PATH] [--model_type MODEL_TYPE] [--config_name CONFIG_NAME]
+                  [--tokenizer_name TOKENIZER_NAME] [--use_fast_tokenizer [USE_FAST_TOKENIZER]] [--no_use_fast_tokenizer]
+                  [--model_revision MODEL_REVISION] [--token TOKEN] [--use_auth_token [USE_AUTH_TOKEN]]
+                  [--dataset_name DATASET_NAME] [--dataset_config_name DATASET_CONFIG_NAME] [--dataset_split DATASET_SPLIT]
+                  [--text_column_name TEXT_COLUMN_NAME] [--reference_column_name REFERENCE_COLUMN_NAME]
+                  [--dataset_revision DATASET_REVISION] [--streaming [STREAMING]] [--overwrite_cache [OVERWRITE_CACHE]]
+                  [--validation_split_percentage VALIDATION_SPLIT_PERCENTAGE]
+                  [--preprocessing_num_workers PREPROCESSING_NUM_WORKERS] [--generation_config_file GENERATION_CONFIG_FILE]
+                  [--per_device_batch_size PER_DEVICE_BATCH_SIZE] [--output_dir OUTPUT_DIR]
+                  [--overwrite_output_dir [OVERWRITE_OUTPUT_DIR]] [--id_column_name ID_COLUMN_NAME]
+                  [--keep_columns KEEP_COLUMNS [KEEP_COLUMNS ...]] [--seed SEED] [--max_new_tokens MAX_NEW_TOKENS]
+                  [--max_window_size MAX_WINDOW_SIZE] [--subsamples SUBSAMPLES] [--use_brace_matching [USE_BRACE_MATCHING]]
                   [--brace_matching_start_level BRACE_MATCHING_START_LEVEL]
 
 optional arguments:
   -h, --help            show this help message and exit
   --model_name_or_path MODEL_NAME_OR_PATH
-                        The model checkpoint for weights initialization. Do not set if you want to train a model from scratch. (default: None)
+                        The model checkpoint for weights initialization. Do not set if you want to train a model from scratch.
+                        (default: None)
   --model_type MODEL_TYPE
-                        If training from scratch, pass a model type from the list: bart, bert, bert-generation, big_bird, bigbird_pegasus, biogpt, blenderbot, blenderbot-small,
-                        bloom, camembert, llama, codegen, cpmant, ctrl, data2vec-text, electra, ernie, falcon, fuyu, git, gpt2, gpt2, gpt_bigcode, gpt_neo, gpt_neox,
-                        gpt_neox_japanese, gptj, llama, marian, mbart, mega, megatron-bert, mistral, mixtral, mpt, musicgen, mvp, open-llama, openai-gpt, opt, pegasus, persimmon,
-                        phi, plbart, prophetnet, qdqbert, reformer, rembert, roberta, roberta-prelayernorm, roc_bert, roformer, rwkv, speech_to_text_2, transfo-xl, trocr, whisper,
-                        xglm, xlm, xlm-prophetnet, xlm-roberta, xlm-roberta-xl, xlnet, xmod (default: None)
+                        If training from scratch, pass a model type from the list: bart, bert, bert-generation, big_bird,
+                        bigbird_pegasus, biogpt, blenderbot, blenderbot-small, bloom, camembert, llama, codegen, cpmant, ctrl,
+                        data2vec-text, electra, ernie, falcon, fuyu, git, gpt2, gpt2, gpt_bigcode, gpt_neo, gpt_neox,
+                        gpt_neox_japanese, gptj, llama, marian, mbart, mega, megatron-bert, mistral, mixtral, mpt, musicgen, mvp,
+                        open-llama, openai-gpt, opt, pegasus, persimmon, phi, plbart, prophetnet, qdqbert, reformer, rembert,
+                        roberta, roberta-prelayernorm, roc_bert, roformer, rwkv, speech_to_text_2, transfo-xl, trocr, whisper, xglm,
+                        xlm, xlm-prophetnet, xlm-roberta, xlm-roberta-xl, xlnet, xmod (default: None)
   --config_name CONFIG_NAME
                         Pretrained config name or path if not the same as model_name (default: None)
   --tokenizer_name TOKENIZER_NAME
@@ -57,10 +64,11 @@ optional arguments:
                         Whether to use one of the fast tokenizer (backed by the tokenizers library) or not. (default: False)
   --model_revision MODEL_REVISION
                         The specific model version to use (can be a branch name, tag name or commit id). (default: main)
-  --token TOKEN         The token to use as HTTP bearer authorization for remote files. If not specified, will use the token generated when running `huggingface-cli login` (stored in
-                        `~/.huggingface`). (default: None)
+  --token TOKEN         The token to use as HTTP bearer authorization for remote files. If not specified, will use the token
+                        generated when running `huggingface-cli login` (stored in `~/.huggingface`). (default: None)
   --use_auth_token [USE_AUTH_TOKEN]
-                        The `use_auth_token` argument is deprecated and will be removed in v4.34. Please use `token` instead. (default: None)
+                        The `use_auth_token` argument is deprecated and will be removed in v4.34. Please use `token` instead.
+                        (default: None)
   --dataset_name DATASET_NAME
                         The name of the dataset to use (via the datasets library). (default: None)
   --dataset_config_name DATASET_CONFIG_NAME
@@ -81,10 +89,6 @@ optional arguments:
                         The percentage of the train set used as validation set in case there is no validation split (default: 5)
   --preprocessing_num_workers PREPROCESSING_NUM_WORKERS
                         The number of processes to use for the preprocessing. (default: None)
-  --log_preditions [LOG_PREDITIONS]
-                        Whether to log predictions during training. (default: False)
-  --log_predition_samples LOG_PREDITION_SAMPLES
-                        Number of samples to log during training. (default: 10)
   --generation_config_file GENERATION_CONFIG_FILE
                         Generation config path if not the same as model_name. (default: None)
   --per_device_batch_size PER_DEVICE_BATCH_SIZE
@@ -92,18 +96,21 @@ optional arguments:
   --output_dir OUTPUT_DIR
                         The output directory where the model predictions and checkpoints will be written. (default: None)
   --overwrite_output_dir [OVERWRITE_OUTPUT_DIR]
-                        Overwrite the content of the output directory. Use this to continue training if output_dir points to a checkpoint directory. (default: False)
+                        Overwrite the content of the output directory. Use this to continue training if output_dir points to a
+                        checkpoint directory. (default: False)
   --id_column_name ID_COLUMN_NAME
                         The column name of the dataset to use as id. If not provided, the index will be used. (default: None)
   --keep_columns KEEP_COLUMNS [KEEP_COLUMNS ...]
-                        The column names of the dataset to keep separate by commas. If not provided, all columns will be removed. (default: None)
+                        The column names of the dataset to keep separate by commas. If not provided, all columns will be removed.
+                        (default: None)
   --seed SEED           Seed for random number generation. (default: None)
   --max_new_tokens MAX_NEW_TOKENS
                         The maximum number of new tokens to generate. (default: None)
   --max_window_size MAX_WINDOW_SIZE
                         The maximum number of tokens in the input. (default: None)
   --subsamples SUBSAMPLES
-                        The number of subsamples to use from each data example. Randomly selected. None means use all. (default: None)
+                        The number of subsamples to use from each data example. Randomly selected. None means use all. (default:
+                        None)
   --use_brace_matching [USE_BRACE_MATCHING]
                         Whether to use brace matching as a stopping criteria. (default: False)
   --brace_matching_start_level BRACE_MATCHING_START_LEVEL
