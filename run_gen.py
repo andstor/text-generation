@@ -2,6 +2,7 @@ import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed, GenerationConfig, AutoConfig
 from accelerate import Accelerator
+from accelerate.utils import DistributedType
 from torch.utils.data import DataLoader
 import json
 from pathlib import Path
@@ -124,12 +125,17 @@ def main():
         )
     tokenizer.pad_token = tokenizer.eos_token
 
+    if accelerator.distributed_type == DistributedType.NO:
+        device_map = "auto" # Activate the naive model parallelism.
+    else:
+        device_map = None
+
     model = AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
         revision=model_args.model_revision,
-        device_map="auto" # buggy!!!
+        device_map=device_map,
     )
     model.tie_weights()
     #model.to(accelerator.device)
