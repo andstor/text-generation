@@ -60,6 +60,12 @@ class ModelArguments:
             "help": "The `use_auth_token` argument is deprecated and will be removed in v4.34. Please use `token` instead."
         },
     )
+
+    adapter_name_or_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "The name or path of the adapter to use."},
+    )
+
     #trust_remote_code: bool = field(
     #    default=False,
     #    metadata={
