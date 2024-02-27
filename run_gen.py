@@ -388,7 +388,7 @@ def main():
         else:
             max_new_tokens = generation_config.max_new_tokens
         #accelerator.print("Generating...")
-        generation_config.num_return_sequences = 2
+        #generation_config.num_return_sequences = 2
         with torch.no_grad():
             # generate the data
             generated = accelerator.unwrap_model(model).generate(
@@ -399,7 +399,7 @@ def main():
                 stopping_criteria=stopping_criteria_list,
                 max_new_tokens=max_new_tokens,
                 use_cache=True,
-                do_sample=True, #TODO: turn off !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                do_sample=False, #TODO: turn off !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             )
         # decode the data
 
