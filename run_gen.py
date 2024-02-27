@@ -14,6 +14,7 @@ from transformers import (
     HfArgumentParser,
     StoppingCriteriaList,
 )
+
 import numpy as np
 import logging
 import random
@@ -125,7 +126,8 @@ def main():
         )
     tokenizer.pad_token = tokenizer.eos_token
 
-    if accelerator.distributed_type == DistributedType.NO:
+    if accelerator.distributed_type == DistributedType.NO \
+       or (accelerator.distributed_type == DistributedType.MULTI_GPU and accelerator.num_processes > 1):
         device_map = "auto" # Activate the naive model parallelism.
     else:
         device_map = None
@@ -138,7 +140,9 @@ def main():
         device_map=device_map,
     )
     model.tie_weights()
-    #model.to(accelerator.device)
+    
+    if model_args.adapter_name_or_path is not None:
+        model.load_adapter(model_args.adapter_name_or_path)
 
     generation_config = {}
     if gen_args.generation_config_file is not None:
