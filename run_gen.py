@@ -127,7 +127,7 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
 
     if accelerator.distributed_type == DistributedType.NO \
-       or (accelerator.distributed_type == DistributedType.MULTI_GPU and accelerator.num_processes > 1):
+       or (accelerator.distributed_type == DistributedType.MULTI_GPU and accelerator.num_processes <= 1):
         device_map = "auto" # Activate the naive model parallelism.
     else:
         device_map = None
