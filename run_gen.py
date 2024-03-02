@@ -14,7 +14,8 @@ from transformers import (
     HfArgumentParser,
     StoppingCriteriaList,
 )
-
+from transformers.testing_utils import CaptureLogger
+import transformers
 import numpy as np
 import logging
 import random
@@ -23,7 +24,7 @@ import sys
 import os
 from arguments import ModelArguments, DatasetArguments, GenerationArguments
 from stopping_criterias import BraceMatchingCriteria
-
+import math
 
 from accelerate.logging import get_logger
 get_logger("transformers").setLevel(logging.ERROR)
@@ -219,31 +220,59 @@ def main():
         reference_column_name = data_args.reference_column_name
         keep_columns.append(reference_column_name)
         min_input_length = 0
+        max_src_length = model.config.max_position_embeddings - 1
     else:
         min_input_length = gen_args.max_window_size + generation_config.max_new_tokens # TODO: check if this is a good value
         max_input_length = gen_args.max_window_size + generation_config.max_new_tokens
+        max_src_length = math.inf
         if max_input_length > model.config.max_position_embeddings:
             raise ValueError(
                 f"max_window_size ({gen_args.max_window_size}) + max_new_tokens ({gen_args.max_new_tokens}) is larger than the maximum position embedding size "
                 f"({model.config.max_position_embeddings})."
             )
 
+    # since this will be pickled to avoid _LazyModule error in Hasher force logger loading before tokenize_function
+    tok_logger = transformers.utils.logging.get_logger("transformers.tokenization_utils_base")
     
     # Tokenize the data
     def tokenize_function(examples):
-        return tokenizer(examples[text_column_name])
+        with CaptureLogger(tok_logger) as cl:
+            input_ids = tokenizer(examples[text_column_name])["input_ids"]
+            attention_mask = tokenizer(examples[text_column_name])["attention_mask"]
+            
+            if reference_column_name is not None:
+                reference_input_ids = tokenizer(examples[reference_column_name])["input_ids"]
+            else: 
+                reference_input_ids = []
+        # clm input could be much much longer than block_size
+        if "Token indices sequence length is longer than the" in cl.out:
+            tok_logger.warning(
+                "^^^^^^^^^^^^^^^^ Please ignore the warning above - this long input will be chunked into smaller bits"
+                " before being passed to the model."
+            )
+        return {"input_ids": input_ids, "attention_mask": attention_mask, "reference_input_ids": reference_input_ids}
+
+    
+    def filter_toolong(examples):
+        return  [ len(ex) <= model.config.max_position_embeddings for ex in examples["input_ids"] ]
     
     def filter_function(examples):
         res = []
         is_dropped = 0
-        for example in examples["input_ids"]:
-            if len(example) < min_input_length:
+        for input_ids, reference_input_ids in zip(examples["input_ids"], examples["reference_input_ids"]):
+            if len(input_ids) < min_input_length:
+                res.append(False)
+                is_dropped += 1
+            elif (len(input_ids) + len(reference_input_ids)) > max_src_length:
                 res.append(False)
                 is_dropped += 1
             else:
                 res.append(True)
         if is_dropped:
-            logger.info(f"Dropped {is_dropped} examples because they were shorter than {min_input_length} tokens.")
+            logger.info(
+                f"Dropped {is_dropped} examples because they were shorter than {min_input_length} tokens, or larger than (or equal to) the maximum position embedding size "
+                f"({model.config.max_position_embeddings})."
+            )
         return res
 
     def array_chunk_max(array, max_size):
@@ -306,6 +335,7 @@ def main():
             "part": [],
             "input_ids": [],
             "attention_mask": [],
+            "reference_input_ids": [],
         }
 
         for i, id in enumerate(indices):
@@ -314,11 +344,13 @@ def main():
 
             input_ids = examples["input_ids"][i][-gen_args.max_window_size:]
             mask = examples["attention_mask"][i][-gen_args.max_window_size:]
+            reference_input_ids = examples["reference_input_ids"][i]
 
             new_examples["id"].append(id)
             new_examples["part"].append([1,1])
             new_examples["input_ids"].append(input_ids)
             new_examples["attention_mask"].append(mask)
+            new_examples["reference_input_ids"].append(reference_input_ids)
         return new_examples
 
 
@@ -436,7 +468,8 @@ def main():
             entry["prediction"] = decoded_predictions[index]
 
             ended = None
-            if len(predicted_ids[index]) == generation_config.max_new_tokens:
+            
+            if len(predicted_ids[index]) == max_new_tokens:
                 ended = "length"
             for stopping_criteria in stopping_criteria_list: # possible race condition
                 if stopping_criteria.is_sequence_stopped(index):
