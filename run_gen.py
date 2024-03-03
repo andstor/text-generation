@@ -150,7 +150,7 @@ def main():
     
     if model_args.adapter_name_or_path is not None:
         from peft import PeftModel, PeftConfig
-        config = PeftConfig.from_pretrained(model_args.adapter_name_or_path)
+        peft_config = PeftConfig.from_pretrained(model_args.adapter_name_or_path) #TODO: save the adapter config to disk
         model = PeftModel.from_pretrained(model, model_args.adapter_name_or_path)
         model = model.merge_and_unload() # merge the adapter into the model for faster inference.
         # TODO: enable multi-adapter loading
