@@ -182,7 +182,7 @@ def main():
         raise ValueError("max_new_tokens is not set.")
 
     if gen_args.max_window_size is None:
-        gen_args.max_window_size = model.config.max_position_embeddings - int(generation_config.max_new_tokens or 0)
+        gen_args.max_window_size = config.max_position_embeddings - int(generation_config.max_new_tokens or 0)
 
 
     # Define stopping criterias
@@ -230,15 +230,15 @@ def main():
         reference_column_name = data_args.reference_column_name
         keep_columns.append(reference_column_name)
         min_input_length = 0
-        max_src_length = model.config.max_position_embeddings - 1
+        max_src_length = config.max_position_embeddings - 1
     else:
         min_input_length = gen_args.max_window_size + generation_config.max_new_tokens # TODO: check if this is a good value
         max_input_length = gen_args.max_window_size + generation_config.max_new_tokens
         max_src_length = math.inf
-        if max_input_length > model.config.max_position_embeddings:
+        if max_input_length > config.max_position_embeddings:
             raise ValueError(
                 f"max_window_size ({gen_args.max_window_size}) + max_new_tokens ({gen_args.max_new_tokens}) is larger than the maximum position embedding size "
-                f"({model.config.max_position_embeddings})."
+                f"({config.max_position_embeddings})."
             )
 
     # since this will be pickled to avoid _LazyModule error in Hasher force logger loading before tokenize_function
@@ -262,10 +262,7 @@ def main():
             )
         return {"input_ids": input_ids, "attention_mask": attention_mask, "reference_input_ids": reference_input_ids}
 
-    
-    def filter_toolong(examples):
-        return  [ len(ex) <= model.config.max_position_embeddings for ex in examples["input_ids"] ]
-    
+
     def filter_function(examples):
         res = []
         is_dropped = 0
@@ -281,7 +278,7 @@ def main():
         if is_dropped:
             logger.info(
                 f"Dropped {is_dropped} examples because they were shorter than {min_input_length} tokens, or larger than (or equal to) the maximum position embedding size "
-                f"({model.config.max_position_embeddings})."
+                f"({config.max_position_embeddings})."
             )
         return res
 
@@ -426,7 +423,7 @@ def main():
         attention_mask.to(accelerator.device)
 
         if generation_config.max_new_tokens is None:
-            max_new_tokens = model.config.max_position_embeddings - prompt_ids.shape[-1]
+            max_new_tokens = config.max_position_embeddings - prompt_ids.shape[-1]
         else:
             max_new_tokens = generation_config.max_new_tokens
         #accelerator.print("Generating...")
