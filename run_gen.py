@@ -149,8 +149,11 @@ def main():
     model.tie_weights()
     
     if model_args.adapter_name_or_path is not None:
-        adapter_name = model.load_adapter(model_args.adapter_name_or_path)
-        model.set_active_adapters(adapter_name)
+        from peft import PeftModel, PeftConfig
+        config = PeftConfig.from_pretrained(model_args.adapter_name_or_path)
+        model = PeftModel.from_pretrained(model, model_args.adapter_name_or_path)
+        model = model.merge_and_unload() # merge the adapter into the model for faster inference.
+        # TODO: enable multi-adapter loading
 
     generation_config = {}
     if gen_args.generation_config_file is not None:
