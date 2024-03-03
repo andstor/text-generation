@@ -27,7 +27,7 @@ from stopping_criterias import BraceMatchingCriteria
 import math
 
 from accelerate.logging import get_logger
-get_logger("transformers").setLevel(logging.ERROR)
+get_logger("transformers").setLevel(logging.INFO)
 logger = get_logger(__name__)
 
 
@@ -133,17 +133,24 @@ def main():
     else:
         device_map = None
 
+    torch_dtype = (
+            model_args.torch_dtype
+            if model_args.torch_dtype in ["auto", None]
+            else getattr(torch, model_args.torch_dtype)
+        )
     model = AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
         revision=model_args.model_revision,
+        torch_dtype=torch_dtype,
         device_map=device_map,
     )
     model.tie_weights()
     
     if model_args.adapter_name_or_path is not None:
-        model.load_adapter(model_args.adapter_name_or_path)
+        adapter_name = model.load_adapter(model_args.adapter_name_or_path)
+        model.set_active_adapters(adapter_name)
 
     generation_config = {}
     if gen_args.generation_config_file is not None:
