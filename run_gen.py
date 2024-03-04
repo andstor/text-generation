@@ -170,7 +170,7 @@ def main():
             print(adapter_config)
             # Dump the adapter configto disk
             with open(Path(gen_args.output_dir) / "adapter_config.json", "w") as f:
-                json.dump(adapter_config.to_dict(), f, indent=4)
+                json.dump(adapter_config.to_dict(), f, indent=4, default=lambda x: None)
 
 
     generation_config = {}
