@@ -51,6 +51,15 @@ class GenerationArguments:
         default=0, metadata={"help": "The level of brace matching to start from."}
     )
 
+    # Optimization libraries
+
+    use_pippy: bool = field(
+        default=False, metadata={"help": "Whether to use pippy as an optimization library."}
+    )
+    use_deepspeed_inference: bool = field(
+        default=False, metadata={"help": "Whether to use deepspeed as an optimization library."}
+    )
+
 
     def __post_init__(self):
         if self.max_new_tokens is not None and self.max_new_tokens.isdigit():
@@ -61,3 +70,8 @@ class GenerationArguments:
 
         #if self.use_brace_matching and self.per_device_batch_size > 1:
         #    raise ValueError("Brace matching can only be used with a per_device_batch_size of 1.")
+
+
+        # only pippy or deepspeed can be used
+        if self.use_pippy and self.use_deepspeed_inference:
+            raise ValueError("Only one optimization library can be used. You can use either pippy or deepspeed_inference.")

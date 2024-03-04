@@ -413,6 +413,36 @@ def main():
     # Prepare everything with `accelerator`.
     model, data_loader = accelerator.prepare(model, data_loader)
     model.eval()
+    
+    
+    
+    # Optimization libraries
+    if gen_args.use_pippy:
+        from accelerate.inference import prepare_pippy
+        # Input configs
+        # Create example inputs for the model
+        #TODO: check sequence length value.
+        input = torch.randint(
+            low=0,
+            high=model.config.vocab_size,
+            size=(gen_args.per_device_batch_size, config.max_position_embeddings),  # bs x seq_len
+            device="cpu",
+            dtype=torch.int64,
+            requires_grad=False,
+        )
+        model = prepare_pippy(model, split_points="auto", example_args=(input,), gather_output=True) #TODO: remove gather_output=True
+
+    elif gen_args.use_deepspeed_inference:
+        import deepspeed
+        # init deepspeed inference engine
+        model = deepspeed.init_inference(
+            model=model,      # Transformers models
+            tensor_parallel={"tp_size": accelerator.num_processes},
+            dtype=torch.float16, # dtype of the weights (fp16)
+            replace_with_kernel_inject=False, # replace the model with the kernel injector
+            #quantize_bits=16, # quantize the model to 32 bits
+        )
+        model = model.module
     #model = accelerator.unwrap_model(model)
     #model, data_loader = accelerator.prepare(
     #    model, data_loader, device_placement=[True, False])
