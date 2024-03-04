@@ -147,13 +147,31 @@ def main():
         device_map=device_map,
     )
     model.tie_weights()
+
+    # Write the model config and generation config to disk
+    if accelerator.is_main_process:
+        # Dump the model config without defaults to disk
+        with open( Path(gen_args.output_dir) / "model_config_diff.json", "w") as f:
+            json.dump(config.to_diff_dict(), f, indent=4)
+
+        # Dump the model config with defaults to disk
+        with open(Path(gen_args.output_dir) / "model_config.json", "w") as f:
+            json.dump(config.to_dict(), f, indent=4)
     
     if model_args.adapter_name_or_path is not None:
         from peft import PeftModel, PeftConfig
-        peft_config = PeftConfig.from_pretrained(model_args.adapter_name_or_path) #TODO: save the adapter config to disk
+        adapter_config = PeftConfig.from_pretrained(model_args.adapter_name_or_path)
         model = PeftModel.from_pretrained(model, model_args.adapter_name_or_path)
         model = model.merge_and_unload() # merge the adapter into the model for faster inference.
         # TODO: enable multi-adapter loading
+        
+        # Write the adapter config and generation config to disk
+        if accelerator.is_main_process:
+            print(adapter_config)
+            # Dump the adapter configto disk
+            with open(Path(gen_args.output_dir) / "adapter_config.json", "w") as f:
+                json.dump(adapter_config.to_dict(), f, indent=4)
+
 
     generation_config = {}
     if gen_args.generation_config_file is not None:
@@ -161,7 +179,6 @@ def main():
         with open(gen_args.generation_config_file, "r") as f:
             generation_config = json.load(f)
             generation_config = GenerationConfig.from_dict(generation_config)
-
 
     elif model_args.model_name_or_path:
         generation_config = model.generation_config
@@ -181,6 +198,19 @@ def main():
     else:
         raise ValueError("max_new_tokens is not set.")
 
+    # Write the generation config to disk
+    if accelerator.is_main_process:
+        print(generation_config)
+
+        # Dump the generation config without defaults to disk
+        with open(Path(gen_args.output_dir) / "generation_config_diff.json", "w") as f:
+            json.dump(generation_config.to_diff_dict(), f, indent=4)
+
+        # Dump the generation config with defaults to disk
+        with open(Path(gen_args.output_dir) / "generation_config.json", "w") as f:
+            json.dump(generation_config.to_dict(), f, indent=4)
+
+
     if gen_args.max_window_size is None:
         gen_args.max_window_size = config.max_position_embeddings - int(generation_config.max_new_tokens or 0)
 
@@ -191,26 +221,6 @@ def main():
         # Expensive to initialize, so reuse the same instance.
         stopping_criteria_list.append(BraceMatchingCriteria(tokenizer, gen_args.brace_matching_start_level))
     
-
-    # Write the model config and generation config to disk
-    if accelerator.is_main_process:
-        print(generation_config)
-
-        # Dump the model config without defaults to disk
-        with open( Path(gen_args.output_dir) / "model_config_diff.json", "w") as f:
-            json.dump(config.to_diff_dict(), f, indent=4)
-
-        # Dump the model config with defaults to disk
-        with open(Path(gen_args.output_dir) / "model_config.json", "w") as f:
-            json.dump(config.to_dict(), f, indent=4)
-
-        # Dump the generation config without defaults to disk
-        with open(Path(gen_args.output_dir) / "generation_config_diff.json", "w") as f:
-            json.dump(generation_config.to_diff_dict(), f, indent=4)
-
-        # Dump the generation config with defaults to disk
-        with open(Path(gen_args.output_dir) / "generation_config.json", "w") as f:
-            json.dump(generation_config.to_dict(), f, indent=4)
 
 
     # Preprocessing the datasets.
