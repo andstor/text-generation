@@ -1,5 +1,6 @@
 accelerate
 transformers
 datasets
-deepspeed
 torch
+deepspeed
+pippy
