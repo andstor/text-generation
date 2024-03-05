@@ -409,9 +409,6 @@ def main():
     # Create the DataLoader
     data_loader = DataLoader(dataset, shuffle=False,
                              collate_fn=data_collator, batch_size=gen_args.per_device_batch_size)
-
-    # Prepare everything with `accelerator`.
-    model, data_loader = accelerator.prepare(model, data_loader)
     model.eval()
     
     
@@ -443,6 +440,11 @@ def main():
             #quantize_bits=16, # quantize the model to 32 bits
         )
         model = model.module
+        
+    else:
+        # Prepare everything with `accelerator`.
+        model, data_loader = accelerator.prepare(model, data_loader)
+
     #model = accelerator.unwrap_model(model)
     #model, data_loader = accelerator.prepare(
     #    model, data_loader, device_placement=[True, False])
@@ -457,11 +459,9 @@ def main():
     # Only show the progress bar once on each machine.
     progress_bar = tqdm(range(len(data_loader) * gen_args.per_device_batch_size), position=accelerator.process_index) #,disable=not accelerator.is_local_main_process)
     for batch in data_loader:
-        prompt_ids = batch["input_ids"]
-        prompt_ids.to(accelerator.device)
-        attention_mask = batch["attention_mask"]
-        attention_mask.to(accelerator.device)
-
+        prompt_ids = batch["input_ids"].to(accelerator.device)
+        attention_mask = batch["attention_mask"].to(accelerator.device)
+        
         if generation_config.max_new_tokens is None:
             max_new_tokens = config.max_position_embeddings - prompt_ids.shape[-1]
         else:
@@ -478,6 +478,7 @@ def main():
                 stopping_criteria=stopping_criteria_list,
                 max_new_tokens=max_new_tokens,
                 use_cache=True,
+                synced_gpus=True, # is_deepspeed_zero3_enabled
                 do_sample=False, #TODO: turn off !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             )
         # decode the data
