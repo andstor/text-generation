@@ -396,7 +396,6 @@ def main():
             load_from_cache_file=not data_args.overwrite_cache,
             desc="Preparing minibatches",
         )
-        #dataset = tokenized_datasets.with_format("torch", columns=[text_column], output_all_columns=True)
     
     dataset = minibatch_dataset
     
@@ -443,11 +442,8 @@ def main():
         
     else:
         # Prepare everything with `accelerator`.
-        model, data_loader = accelerator.prepare(model, data_loader)
-
-    #model = accelerator.unwrap_model(model)
-    #model, data_loader = accelerator.prepare(
-    #    model, data_loader, device_placement=[True, False])
+        #model, data_loader = accelerator.prepare(model, data_loader)
+        model= accelerator.prepare_model(model)
 
     # save the data
     i = "{:05n}".format(accelerator.process_index + 1)
@@ -478,7 +474,7 @@ def main():
                 stopping_criteria=stopping_criteria_list,
                 max_new_tokens=max_new_tokens,
                 use_cache=True,
-                synced_gpus=True, # is_deepspeed_zero3_enabled
+                #synced_gpus=True, #not needed as of https://github.com/huggingface/transformers/pull/22242
                 do_sample=False, #TODO: turn off !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             )
         # decode the data
