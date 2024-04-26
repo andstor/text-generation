@@ -400,7 +400,9 @@ def main():
     dataset = minibatch_dataset
     
     def data_collator(examples):
-        batch = tokenizer.pad(examples)
+        batch = tokenizer.pad(examples).data
+        # Access data dict because we keep columns that are not to be put on device.
+        # BatchEncoding has "to" func and need to circumvent  https://github.com/huggingface/accelerate/pull/2438
         batch["input_ids"] = torch.tensor(batch["input_ids"])
         batch["attention_mask"] = torch.tensor(batch["attention_mask"])
         return batch
@@ -442,8 +444,7 @@ def main():
         
     else:
         # Prepare everything with `accelerator`.
-        #model, data_loader = accelerator.prepare(model, data_loader)
-        model= accelerator.prepare_model(model)
+        model, data_loader = accelerator.prepare(model, data_loader)
 
     # save the data
     i = "{:05n}".format(accelerator.process_index + 1)
