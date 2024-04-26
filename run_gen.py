@@ -436,7 +436,7 @@ def main():
         model = deepspeed.init_inference(
             model=model,      # Transformers models
             tensor_parallel={"tp_size": accelerator.num_processes},
-            dtype=torch.float16, # dtype of the weights (fp16)
+            dtype=torch_dtype, # dtype of the weights
             replace_with_kernel_inject=False, # replace the model with the kernel injector
             #quantize_bits=16, # quantize the model to 32 bits
         )
