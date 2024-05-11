@@ -552,12 +552,6 @@ def main():
             max_new_tokens = generation_config.max_new_tokens
         #accelerator.print("Generating...")
         #generation_config.num_return_sequences = 2
-
-        print("shape:", prompt_ids.shape)
-        print("attention_mask:", attention_mask.shape)
-
-        print("max_new_tokens:", max_new_tokens)
-
         with torch.no_grad():
             # generate the data
             generated = accelerator.unwrap_model(model).generate(
