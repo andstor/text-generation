@@ -311,10 +311,7 @@ def main():
         minimum_gen_length = 1
         if adapter_config.peft_type == "PROMPT_TUNING":
             minimum_gen_length += adapter_config.num_virtual_tokens
-
         max_src_length = block_size - minimum_gen_length
-        print("max_src_length:", max_src_length)
-        print("minimum_gen_length:", minimum_gen_length)
 
     else:
         min_input_length = gen_args.max_window_size + generation_config.max_new_tokens # TODO: check if this is a good value
