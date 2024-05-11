@@ -38,7 +38,8 @@ usage: run_gen.py [-h] [--model_name_or_path MODEL_NAME_OR_PATH] [--model_type M
                   [--per_device_batch_size PER_DEVICE_BATCH_SIZE] [--output_dir OUTPUT_DIR]
                   [--overwrite_output_dir [OVERWRITE_OUTPUT_DIR]] [--id_column_name ID_COLUMN_NAME]
                   [--keep_columns KEEP_COLUMNS [KEEP_COLUMNS ...]] [--seed SEED] [--max_new_tokens MAX_NEW_TOKENS]
-                  [--max_window_size MAX_WINDOW_SIZE] [--subsamples SUBSAMPLES] [--use_brace_matching [USE_BRACE_MATCHING]]
+                  [--max_window_size MAX_WINDOW_SIZE] [--subsamples SUBSAMPLES] [--block_size BLOCK_SIZE]
+                  [--use_brace_matching [USE_BRACE_MATCHING]]
                   [--brace_matching_start_level BRACE_MATCHING_START_LEVEL]
 
 optional arguments:
@@ -111,6 +112,8 @@ optional arguments:
   --subsamples SUBSAMPLES
                         The number of subsamples to use from each data example. Randomly selected. None means use all. (default:
                         None)
+  --block_size BLOCK_SIZE
+                        Optional limit the model's max position embeddings.(default: None)
   --use_brace_matching [USE_BRACE_MATCHING]
                         Whether to use brace matching as a stopping criteria. (default: False)
   --brace_matching_start_level BRACE_MATCHING_START_LEVEL
@@ -118,7 +121,7 @@ optional arguments:
 ```
 
 ### Complete generation
-Complete generation is done by providing both an input data column and a reference data column. This will make the model use the whole prompt as input. By setting `--max_new_tokens` to `auto`, all the unused embedding space is used to generate as much as possible. The maximum number of tokens in the input can be truncated (from the left) by setting `--max_window_size`, thus allowing for a longer output (`--max_new_tokens`).
+Complete generation is done by providing both an input data column and a reference data column. This will make the model use the whole prompt as input. By setting `--max_new_tokens` to `auto`, all the unused embedding space is used to generate as much as possible. The maximum number of position embeddings allowed can also be manually specified by setting the `--block_size`. The maximum number of tokens in the input can be truncated (from the left) by setting `--max_window_size`, thus allowing for a longer output (`--max_new_tokens`).
 
 #### Example
 The following example will generate samples from the test split of the [methods2test_small](https://huggingface.co/datasets/andstor/methods2test_small) dataset using the greedy decoding strategy. The output will be saved to the `output` directory.
@@ -148,7 +151,7 @@ Early stopping can be done by using brace matching. This will stop the generatio
 ```
 
 ### Strided generation
-Stridden generation is done by only providing an input data column. This will be split into parts where each part is generated in a "sliding window" approach. Each window serves as the reference for the preceding window. The window stride (read size) is determined by the `--max_window_size` argument. The number of tokens to be generated is controlled by `--max_new_tokens`. The number of subsamples to use from each data example can be controlled by `--subsamples`. If `--subsamples` is set to `None`, all subsamples will be used.
+Stridden generation is done by only providing an input data column. This will be split into parts where each part is generated in a "sliding window" approach. Each window serves as the reference for the preceding window. The window stride (read size) is determined by the `--max_window_size` argument. The number of tokens to be generated is controlled by `--max_new_tokens`. The number of subsamples to use from each data example can be controlled by `--subsamples`. If `--subsamples` is set to `None`, all subsamples will be used. The maximum number of position embeddings allowed can also be manually specified by setting the `--block_size`.
 
 #### Filtering
 The data is filtered by the following criteria:
