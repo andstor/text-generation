@@ -43,6 +43,10 @@ class GenerationArguments:
         default=None, metadata={"help": "The number of subsamples to use from each data example. Randomly selected. None means use all."}
     )
 
+    block_size: Optional[int] = field(
+        default=None, metadata={"help": ("Optional limit the model's max position embeddings.")}
+    )
+
     # Stopping criterias
     use_brace_matching: bool = field(
         default=False, metadata={"help": "Whether to use brace matching as a stopping criteria."}

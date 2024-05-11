@@ -25,6 +25,9 @@ import os
 from arguments import ModelArguments, DatasetArguments, GenerationArguments
 from stopping_criterias import BraceMatchingCriteria
 import math
+import re
+import time
+
 
 from accelerate.logging import get_logger
 get_logger("transformers").setLevel(logging.INFO)
@@ -64,15 +67,25 @@ def main():
     if gen_args.seed is not None:
         set_seed(gen_args.seed)
 
+    
+    # output file
+    i = "{:05n}".format(accelerator.process_index + 1)
+    n = "{:05n}".format(accelerator.num_processes)
+    path = Path(gen_args.output_dir) / (f"{i}-of-{n}" + f".{data_args.dataset_split}.jsonl")
+
 
     # Write the generation config to disk
     if accelerator.is_main_process:
-        if os.path.isdir(gen_args.output_dir) and not gen_args.overwrite_output_dir:
-            if len(os.listdir(gen_args.output_dir)) > 0:
-                raise ValueError(
-                    f"Output directory ({gen_args.output_dir}) already exists and is not empty. "
-                    "Use --overwrite_output_dir to overcome."
-                )
+        if os.path.isdir(gen_args.output_dir):
+            if gen_args.overwrite_output_dir:
+                if len(os.listdir(gen_args.output_dir)) > 0:
+                    logger.warning(f"Output directory ({gen_args.output_dir}) already exists and is not empty. Overwriting it.")
+                    # Add countdown for safety
+                    for i in range(5, 0, -1):
+                        logger.warning(f"***** Overwriting output directory in {i} seconds *****")
+                        time.sleep(1)
+
+                    os.system(f"rm -r {gen_args.output_dir}/*")
         
         if gen_args.output_dir is not None:    
             #safe_dataset_name = urllib.parse.quote(args.dataset_name, safe='')
@@ -83,6 +96,27 @@ def main():
             raise ValueError("Need a output directory.")
     accelerator.wait_for_everyone()
 
+
+    skip_indices = []
+    if not gen_args.overwrite_output_dir:
+        if gen_args.id_column_name is None:
+            raise ValueError("id_column_name must be set to use resumable generation.")
+        
+        with accelerator.main_process_first():
+            # try to load existing files 
+            # check if the file is already generated
+            regex = r"^(\d+)-of-(\d+)." + re.escape(data_args.dataset_split) + r"\.jsonl$"
+            files = os.listdir(gen_args.output_dir)
+
+            skip_indices = set()
+            for file in files:
+                matches = re.search(regex, file)
+                if matches:
+                    with open(Path(gen_args.output_dir) / file, "r") as f:
+                        for line in f:
+                            entry = json.loads(line)
+                            skip_indices.add(entry["id"])
+        accelerator.wait_for_everyone()
 
     #if accelerator.is_main_process:
     #    # write args to disk
@@ -164,7 +198,7 @@ def main():
         model = PeftModel.from_pretrained(model, model_args.adapter_name_or_path)
         
         #only if lora is used:
-        if model.peft_config.peft_type == "LORA": #Wrong, check the config
+        if adapter_config.peft_type == "LORA": #Wrong, check the config
             model = model.merge_and_unload() # merge the adapter into the model for faster inference.
         # TODO: enable multi-adapter loading
         
@@ -214,8 +248,38 @@ def main():
             json.dump(generation_config.to_dict(), f, indent=4)
 
 
+
+
+    if hasattr(config, "max_position_embeddings"):
+        max_pos_embeddings = config.max_position_embeddings
+    else:
+        # Define a default value if the attribute is missing in the config.
+        max_pos_embeddings = 1024
+
+    if gen_args.block_size is None:
+        block_size = tokenizer.model_max_length
+        if block_size > max_pos_embeddings:
+            logger.warning(
+                f"The tokenizer picked seems to have a very large `model_max_length` ({tokenizer.model_max_length}). "
+                f"Using block_size={min(1024, config.max_position_embeddings)} instead. You can change that default value by passing --block_size xxx."
+            )
+            if max_pos_embeddings > 0:
+                block_size = min(1024, max_pos_embeddings)
+            else:
+                block_size = 1024
+    else:
+        if gen_args.block_size > tokenizer.model_max_length:
+            logger.warning(
+                f"The block_size passed ({gen_args.block_size}) seems to be larger than the maximum length for the model "
+                f"({tokenizer.model_max_length}). Using block_size={gen_args.block_size}."
+            )
+        # Some models have inproperly tokenizer.model_max_length, so we allow overriding it
+        #block_size = min(data_args.block_size, tokenizer.model_max_length)
+        block_size = gen_args.block_size
+
+
     if gen_args.max_window_size is None:
-        gen_args.max_window_size = config.max_position_embeddings - int(generation_config.max_new_tokens or 0)
+        gen_args.max_window_size = block_size - int(generation_config.max_new_tokens or 0) #TODO: check if this should be 1
 
 
     # Define stopping criterias
@@ -243,15 +307,23 @@ def main():
         reference_column_name = data_args.reference_column_name
         keep_columns.append(reference_column_name)
         min_input_length = 0
-        max_src_length = config.max_position_embeddings - 1
+        
+        minimum_gen_length = 1
+        if adapter_config.peft_type == "PROMPT_TUNING":
+            minimum_gen_length += adapter_config.num_virtual_tokens
+
+        max_src_length = block_size - minimum_gen_length
+        print("max_src_length:", max_src_length)
+        print("minimum_gen_length:", minimum_gen_length)
+
     else:
         min_input_length = gen_args.max_window_size + generation_config.max_new_tokens # TODO: check if this is a good value
         max_input_length = gen_args.max_window_size + generation_config.max_new_tokens
         max_src_length = math.inf
-        if max_input_length > config.max_position_embeddings:
+        if max_input_length > block_size:
             raise ValueError(
-                f"max_window_size ({gen_args.max_window_size}) + max_new_tokens ({gen_args.max_new_tokens}) is larger than the maximum position embedding size "
-                f"({config.max_position_embeddings})."
+                f"max_window_size ({gen_args.max_window_size}) + max_new_tokens ({gen_args.max_new_tokens}) is larger than the max position embeddings allowed "
+                f"({block_size})."
             )
 
     # since this will be pickled to avoid _LazyModule error in Hasher force logger loading before tokenize_function
@@ -289,11 +361,22 @@ def main():
             else:
                 res.append(True)
         if is_dropped:
-            logger.info(
-                f"Dropped {is_dropped} examples because they were shorter than {min_input_length} tokens, or larger than (or equal to) the maximum position embedding size "
-                f"({config.max_position_embeddings})."
+            logger.warning(
+                f"Dropped {is_dropped} examples because they were shorter than {min_input_length} tokens, or larger than (or equal to) the max position embeddings allowed "
+                f"({block_size})."
             )
         return res
+    
+    def filter_subsamples_function(examples):
+        # resumable_dataset. If existing generation is found, skip the example.
+        res = []
+        for id in examples["id"]:
+            if id in skip_indices:
+                res.append(False)
+            else:
+                res.append(True)
+        return res
+
 
     def array_chunk_max(array, max_size):
         """
@@ -389,12 +472,12 @@ def main():
             load_from_cache_file=not data_args.overwrite_cache,
             desc="Filtering min length",
         )
-        resumable_dataset = tokenized_dataset.filter(
+        resumable_dataset = filtered_dataset.filter(
             filter_subsamples_function,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
             load_from_cache_file=not data_args.overwrite_cache,
-            desc="Filtering min length",
+            desc="Filtering subsamples",
         )
         minibatch_dataset = resumable_dataset.map(
             cut_function if reference_column_name is None else single_batch_function,
@@ -432,7 +515,7 @@ def main():
         input = torch.randint(
             low=0,
             high=model.config.vocab_size,
-            size=(gen_args.per_device_batch_size, config.max_position_embeddings),  # bs x seq_len
+            size=(gen_args.per_device_batch_size, block_size),  # bs x seq_len
             device="cpu",
             dtype=torch.int64,
             requires_grad=False,
@@ -455,25 +538,26 @@ def main():
         # Prepare everything with `accelerator`.
         model, data_loader = accelerator.prepare(model, data_loader)
 
-    # save the data
-    i = "{:05n}".format(accelerator.process_index + 1)
-    n = "{:05n}".format(accelerator.num_processes)
-
-    path = Path(gen_args.output_dir) / (f"{i}-of-{n}" + f".{data_args.dataset_split}.jsonl")
-    fp = open(path, 'w')
+    fp = open(path, 'a')
 
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(len(data_loader) * gen_args.per_device_batch_size), position=accelerator.process_index) #,disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(range(len(data_loader) * gen_args.per_device_batch_size), initial=len(skip_indices), position=accelerator.process_index) #,disable=not accelerator.is_local_main_process)
     for batch in data_loader:
         prompt_ids = batch["input_ids"].to(accelerator.device)
         attention_mask = batch["attention_mask"].to(accelerator.device)
         
         if generation_config.max_new_tokens is None:
-            max_new_tokens = config.max_position_embeddings - prompt_ids.shape[-1]
+            max_new_tokens = block_size - prompt_ids.shape[-1]
         else:
             max_new_tokens = generation_config.max_new_tokens
         #accelerator.print("Generating...")
         #generation_config.num_return_sequences = 2
+
+        print("shape:", prompt_ids.shape)
+        print("attention_mask:", attention_mask.shape)
+
+        print("max_new_tokens:", max_new_tokens)
+
         with torch.no_grad():
             # generate the data
             generated = accelerator.unwrap_model(model).generate(
