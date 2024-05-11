@@ -162,7 +162,10 @@ def main():
         from peft import PeftModel, PeftConfig
         adapter_config = PeftConfig.from_pretrained(model_args.adapter_name_or_path)
         model = PeftModel.from_pretrained(model, model_args.adapter_name_or_path)
-        model = model.merge_and_unload() # merge the adapter into the model for faster inference.
+        
+        #only if lora is used:
+        if model.peft_config.peft_type == "LORA": #Wrong, check the config
+            model = model.merge_and_unload() # merge the adapter into the model for faster inference.
         # TODO: enable multi-adapter loading
         
         # Write the adapter config and generation config to disk
@@ -273,7 +276,7 @@ def main():
         return {"input_ids": input_ids, "attention_mask": attention_mask, "reference_input_ids": reference_input_ids}
 
 
-    def filter_function(examples):
+    def filter_length_function(examples):
         res = []
         is_dropped = 0
         for input_ids, reference_input_ids in zip(examples["input_ids"], examples["reference_input_ids"]):
@@ -379,15 +382,21 @@ def main():
             load_from_cache_file=not data_args.overwrite_cache,
             desc="Running tokenizer on dataset",
         )
-
         filtered_dataset = tokenized_dataset.filter(
-            filter_function,
+            filter_length_function,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
             load_from_cache_file=not data_args.overwrite_cache,
             desc="Filtering min length",
         )
-        minibatch_dataset = filtered_dataset.map(
+        resumable_dataset = tokenized_dataset.filter(
+            filter_subsamples_function,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            load_from_cache_file=not data_args.overwrite_cache,
+            desc="Filtering min length",
+        )
+        minibatch_dataset = resumable_dataset.map(
             cut_function if reference_column_name is None else single_batch_function,
             with_indices=True,
             batched=True,
