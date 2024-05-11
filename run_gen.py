@@ -277,6 +277,9 @@ def main():
         #block_size = min(data_args.block_size, tokenizer.model_max_length)
         block_size = gen_args.block_size
 
+    if model_args.adapter_name_or_path and adapter_config.peft_type == "PROMPT_TUNING":
+        block_size -= adapter_config.num_virtual_tokens
+
 
     if gen_args.max_window_size is None:
         gen_args.max_window_size = block_size - int(generation_config.max_new_tokens or 0) #TODO: check if this should be 1
@@ -308,10 +311,7 @@ def main():
         keep_columns.append(reference_column_name)
         min_input_length = 0
         
-        minimum_gen_length = 1
-        if adapter_config.peft_type == "PROMPT_TUNING":
-            minimum_gen_length += adapter_config.num_virtual_tokens
-        max_src_length = block_size - minimum_gen_length
+        max_src_length = block_size - 1 # Minimum room for one token
 
     else:
         min_input_length = gen_args.max_window_size + generation_config.max_new_tokens # TODO: check if this is a good value
