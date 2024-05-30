@@ -198,7 +198,8 @@ def main():
         model = PeftModel.from_pretrained(model, model_args.adapter_name_or_path)
         
         #only if lora is used:
-        if adapter_config.peft_type == "LORA": #Wrong, check the config
+        if adapter_config.peft_type in ("LORA", "IA3"):
+            print("merging adapter...")
             model = model.merge_and_unload() # merge the adapter into the model for faster inference.
         # TODO: enable multi-adapter loading
         
@@ -367,7 +368,7 @@ def main():
     def filter_subsamples_function(examples):
         # resumable_dataset. If existing generation is found, skip the example.
         res = []
-        for id in examples["id"]:
+        for id in examples[gen_args.id_column_name]:
             if id in skip_indices:
                 res.append(False)
             else:
@@ -538,7 +539,7 @@ def main():
     fp = open(path, 'a')
 
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(len(data_loader) * gen_args.per_device_batch_size), initial=len(skip_indices), position=accelerator.process_index) #,disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(total=(len(data_loader) * gen_args.per_device_batch_size) + len(skip_indices), initial=len(skip_indices), position=accelerator.process_index) #,disable=not accelerator.is_local_main_process)
     for batch in data_loader:
         prompt_ids = batch["input_ids"].to(accelerator.device)
         attention_mask = batch["attention_mask"].to(accelerator.device)
